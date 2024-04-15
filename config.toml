@@ -1,0 +1,44 @@
+#[preflight]
+#codec = "auto" # TODO: config to be implemented
+#assume_no_internet = true # TODO: config to be implemented
+
+[transfer]
+# the codec to use for encoding/decoding every single byte exchanged between listen-mode and spy-mode
+codec = "hex"
+# the buffer size for the signature detector, we use regex signatures to detect patterns from the incoming
+# data stream and extract the data that we are interested in. for example for the initial handshake between
+# listen-mode and spy-mode, or in preflight script to collect the exit code and output of executed commands
+signature_detector_buffer = "10KB"
+# the buffer size used for data transfer, used in all io transmissions plus the chunk size we used for
+# preflight upload
+buffer = "64KB"
+# the handshake timeout for the initial handshake between listen-mode and spy-mode
+connection_timeout = "10s"
+# the timeout for requests between listen-mode and spy-mode
+request_timeout = "10s"
+
+[log]
+# choose between "trace", "debug", "info", "warn", "error" to calibrate the verbosity of the logs
+# at "trace" level, the logs will contain all binary data exchanged between the client and the server
+level = "info"
+# logging to file is the only option as the operation field of this tool is stdin/stdout,
+# so we can not convolute output with logs
+file = "unbound_ssh.log"
+
+[[service]]
+type = "echo"
+bind = "tcp://127.0.0.1:10689"
+
+[[service]]
+type = "embedded_webdav"
+bind = "tcp://127.0.0.1:10690"
+
+#[[service]]
+#type = "embedded_ssh"
+#bind = "tcp://unbound-ssh.local:10691"
+#certificate = "cert/unbound-ssh.local-key.pem"
+
+#[[service]]
+#type = "port_forward"
+#bind = "tcp://127.0.0.1:10692"
+#destination = "tcp://httpbin.org:80"
