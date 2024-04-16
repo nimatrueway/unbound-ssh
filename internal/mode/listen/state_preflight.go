@@ -9,9 +9,6 @@ import (
 	"os"
 )
 
-// type the following in console on the server side to start preflight mode
-// > echo unbound-ssh:preflight:$(date +%s)
-
 type PreflightState struct {
 	*BaseState
 }

@@ -10,7 +10,7 @@ import (
 
 func Listen(cmd []string) error {
 	ctx := context.Background()
-	// launch the base mode
+	// create base state
 	baseState, err := listen.CreateBaseState(cmd)
 	defer baseState.Close()
 	if err != nil {
@@ -18,31 +18,31 @@ func Listen(cmd []string) error {
 	}
 
 	for {
-		// to signature detect mode
-		signatureSearchMode := listen.CreateWiretapState(baseState)
+		// transition to wiretap state
+		wiretapState := listen.CreateWiretapState(baseState)
 
-		// run the signature search mode, continue only if SignatureFound error is returned
+		// run wiretap state, continue only if SignatureFound error is returned
 		stdinSigs := []signature.Signature{&signature.Preflight{}}
 		ptyStdoutSigs := []signature.Signature{&signature.SpyStart{}}
-		found, err := signatureSearchMode.TransferUntilFound(ctx, stdinSigs, ptyStdoutSigs)
+		found, err := wiretapState.TransferUntilFound(ctx, stdinSigs, ptyStdoutSigs)
 		if err != nil {
 			return err
 		}
 
 		if _, ok := found.(*signature.SpyStart); ok {
-			logrus.Info("spy hello signature detected, transitioned to pre-yamux mode.")
-			// switch to pre-yamux mode for handshaking and connecting
-			preYamuxMode := listen.NewConnectingState(baseState)
-			err := preYamuxMode.Connect(ctx)
+			logrus.Info("spy hello signature detected, transitioned to connecting state.")
+			// transition to connecting state for handshake
+			connectingState := listen.NewConnectingState(baseState)
+			err := connectingState.Connect(ctx)
 			if err != nil {
-				logrus.Warnf("yamux mode failed going back to transfer mode: %s", err.Error())
+				logrus.Warnf("connecting/connected state failed, transitioning back to wiretap state: %s", err.Error())
 			}
 		} else if _, ok := found.(*signature.Preflight); ok {
-			logrus.Info("preflight signature detected, transitioned to preflight mode.")
-			preflightMode := listen.NewPreflightState(baseState)
-			err := preflightMode.Run(ctx)
+			logrus.Info("preflight signature detected, transitioning to preflight state.")
+			preflightState := listen.NewPreflightState(baseState)
+			err := preflightState.Run(ctx)
 			if err != nil {
-				logrus.Warnf("preflight mode failed going back to transfer mode: %s", err.Error())
+				logrus.Warnf("preflight state failed transitioning back to wiretap state: %s", err.Error())
 			}
 		} else {
 			return nil

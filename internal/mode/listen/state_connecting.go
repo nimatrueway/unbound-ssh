@@ -37,7 +37,7 @@ func (pym *ConnectingState) Connect(ctx context.Context) error {
 		return err
 	}
 
-	// create yamux mode
+	// create connected state
 	connectedState := CreateConnectedState(pym.baseState.PtyStdout, pym.baseState.Pty)
 
 	// exchange context
@@ -46,7 +46,7 @@ func (pym *ConnectingState) Connect(ctx context.Context) error {
 	// allow user to kill the process with ctrl+c or ctrl+d
 	reactToClose := term.NewReadInBackground(pym.baseState.Stdin.BindTo(connectedStateCtx))
 	stop := func() {
-		logrus.Info("received interrupt signal, shutting down yamux mode.")
+		logrus.Info("received interrupt signal, shutting down connected state.")
 		connectedStateCloser()
 	}
 	reactToClose.ReactTo(EndOfText, stop).Start(connectedStateCtx)

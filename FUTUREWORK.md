@@ -1,5 +1,6 @@
 # Future Work
 
+- [ ] fix and unit-test preflight upload cancellation using ubuntu.
 - [ ] remove wildcard bullshit from the config file
 - [ ] audit all timeout usages and separate them
 - [ ] make it work without `config.toml` 

@@ -50,9 +50,9 @@ func Spy() error {
 		return err
 	}
 
-	// to yamux mode
-	yamuxMode := spy.NewConnectedState(baseState.Stdin, os.Stdout)
-	err = yamuxMode.ListenAndServe(ctx, serviceMan)
+	// to connected state
+	connectedState := spy.NewConnectedState(baseState.Stdin, os.Stdout)
+	err = connectedState.ListenAndServe(ctx, serviceMan)
 	if err != nil {
 		return tracerr.Wrap(err)
 	}

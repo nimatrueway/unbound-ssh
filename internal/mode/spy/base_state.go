@@ -12,7 +12,7 @@ type BaseState struct {
 }
 
 func NewBaseState() (BaseState, error) {
-	// create raw switch to switch between raw and cooked mode
+	// create raw switch to switch between raw and cooked tty mode
 	rawSwitch, err := term2.NewRawSwitch()
 	if err != nil {
 		return BaseState{}, err

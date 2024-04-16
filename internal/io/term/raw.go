@@ -17,7 +17,7 @@ func NewRawSwitch() (*RawSwitch, error) {
 	if err != nil {
 		return nil, err
 	}
-	logrus.Debug("switched to raw mode.")
+	logrus.Debug("switched to raw tty mode.")
 
 	return &RawSwitch{fd: stdinFd, state: state}, nil
 }
@@ -25,5 +25,5 @@ func NewRawSwitch() (*RawSwitch, error) {
 func (r *RawSwitch) Restore() {
 	_ = term.Restore(int(os.Stdin.Fd()), r.state)
 
-	logrus.Debug("switched to cooked mode.")
+	logrus.Debug("switched to cooked tty mode.")
 }
