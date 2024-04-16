@@ -1,0 +1,27 @@
+@startuml
+state ListenMode {
+  state "Wiretap state" as Wiretap
+  state "Connecting state" as Connecting
+  state "Connected state" as Connected
+  state "Preflight state" as Preflight
+
+  [*] -> Wiretap
+  Wiretap --> Connecting : pty-stdin: hello
+  Wiretap ---> [*] : process\nexit
+  Connecting --> Connected : spy-mode: hello (yamux)
+  Wiretap ---> Preflight : stdin[:3] = ^G^G^G
+  Wiretap <- Preflight : finish
+  Wiretap <-- Connecting : failed\nhandshake
+  Wiretap <-- Connected : fail or\n^C
+}
+
+state SpyMode {
+    state "Connected state" as SpyConnected
+    [*] --> SpyConnected : successful\nhandshake
+    [*] --> [*] : handshake\nfailure
+}
+
+Connected -[dotted]-> SpyConnected
+SpyConnected -[dotted]-> Connected
+
+@enduml

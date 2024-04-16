@@ -9,7 +9,7 @@ import (
 )
 
 type Signature interface {
-	Find(in string) (matchEndIndex int)
+	Find(input string) (matchEndIndex int)
 }
 
 func findRegex(in string, re *regexp.Regexp) (groups []string, lastMatchIdx int) {

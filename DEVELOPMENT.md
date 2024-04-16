@@ -1,5 +1,9 @@
 # Build
 
+## Architecture
+
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+
 ## Prerequisites
 
 ```bash

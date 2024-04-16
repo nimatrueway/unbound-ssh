@@ -145,6 +145,10 @@ bind = "tcp://127.0.0.1:10689"
 2. consider using multiple ssh sessions through [embedded ssh server](#embedded-ssh) instead
 3. consider using [WSL](https://en.wikipedia.org/wiki/Windows_Subsystem_for_Linux) instead
 
+# Development
+
+[DEVELOPMENT.md](DEVELOPMENT.md)
+
 # Future Work
 
 Moved to [FUTUREWORK.md](FUTUREWORK.md)
