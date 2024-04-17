@@ -3,4 +3,5 @@ output/*
 cert/*
 *.log
 .trash
+.DS_Store
 __debug_bin*

@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v1.0-alpha6
+
+- Fix bug in `preflight` script, specifically the binary uploading step where cancellation did not restore the tty to
+  cooked mode
+
 ## v1.0-alpha5
 
 - Provide better RPC infrastructure for listen-mode and spy-mode to communicate
