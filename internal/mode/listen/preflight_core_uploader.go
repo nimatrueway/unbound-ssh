@@ -157,7 +157,7 @@ func writeFile(ctx context.Context, shell *ShellExecutor, filename string, data 
 
 	// upon exit restore terminal settings
 	defer func() {
-		_, closeErr := shell.Execute(ctx, fmt.Sprintf(`stty "%s"`, res.Output), nil)
+		_, closeErr := shell.Execute(context.Background(), fmt.Sprintf(`stty "%s"`, res.Output), nil)
 		if closeErr != nil {
 			logrus.Warnf("failed to restore terminal settings: %s", closeErr.Error())
 		}
@@ -165,7 +165,7 @@ func writeFile(ctx context.Context, shell *ShellExecutor, filename string, data 
 
 	// upon exit clean up temporary chunks
 	defer func() {
-		_, closeErr := shell.Execute(ctx, fmt.Sprintf(`rm %s_chunk_*.tmp`, filename), nil)
+		_, closeErr := shell.Execute(context.Background(), fmt.Sprintf(`rm %s_chunk_*.tmp`, filename), nil)
 		if closeErr != nil {
 			logrus.Warnf("failed to clean up temporary chunks: %s", closeErr.Error())
 		}
