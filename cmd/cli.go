@@ -36,9 +36,6 @@ var ListenCmd = &cobra.Command{
 	},
 }
 
-var ListenFlags struct {
-}
-
 var SpyCmd = &cobra.Command{
 	Use:   "spy",
 	Short: "Run in spy mode on the remote server and connects to the instance that is running in listen mode on the other side.",
@@ -51,9 +48,6 @@ var SpyCmd = &cobra.Command{
 			panic(err)
 		}
 	},
-}
-
-var SpyCmdArgs struct {
 }
 
 func init() {
