@@ -17,13 +17,14 @@ func Listen(cmd []string) error {
 		return tracerr.Wrap(err)
 	}
 
-	for {
-		// transition to wiretap state
-		wiretapState := listen.CreateWiretapState(baseState)
+	// transition to wiretap state
+	wiretapState := listen.CreateWiretapState(baseState)
 
+	for {
 		// run wiretap state, continue only if SignatureFound error is returned
 		stdinSigs := []signature.Signature{&signature.Preflight{}}
 		ptyStdoutSigs := []signature.Signature{&signature.SpyStart{}}
+
 		found, err := wiretapState.TransferUntilFound(ctx, stdinSigs, ptyStdoutSigs)
 		if err != nil {
 			return err

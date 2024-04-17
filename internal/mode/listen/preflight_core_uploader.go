@@ -140,14 +140,16 @@ func createFileReader(file string) (stdio.ReadCloser, error) {
 }
 
 func writeFile(ctx context.Context, shell *ShellExecutor, filename string, data stdio.ReadCloser) error {
+	// upon exit clean up temporary chunks
+	defer func() {
+		_, closeErr := shell.Execute(context.Background(), fmt.Sprintf(`rm %s_chunk_*.tmp`, filename), nil)
+		if closeErr != nil {
+			logrus.Warnf("failed to clean up temporary chunks: %s", closeErr.Error())
+		}
+	}()
+
 	// capture current stty settings
 	res, err := shell.Execute(ctx, `stty -g`, nil)
-	if err != nil {
-		return err
-	}
-
-	// set terminal to raw mode, to avoid tty echoing and buffering limitation
-	_, err = shell.Execute(ctx, `stty raw opost -echo`, nil)
 	if err != nil {
 		return err
 	}
@@ -160,13 +162,15 @@ func writeFile(ctx context.Context, shell *ShellExecutor, filename string, data 
 		}
 	}()
 
-	// upon exit clean up temporary chunks
-	defer func() {
-		_, closeErr := shell.Execute(context.Background(), fmt.Sprintf(`rm %s_chunk_*.tmp`, filename), nil)
-		if closeErr != nil {
-			logrus.Warnf("failed to clean up temporary chunks: %s", closeErr.Error())
-		}
-	}()
+	// set terminal to raw mode, to avoid tty echoing and buffering limitation
+	_, err = shell.Execute(ctx, `stty raw opost -echo`, nil)
+	if err != nil {
+		return err
+	}
+
+	// make data read interruptible through context cancellation
+	ctxData := core.NewContextReader(data)
+	data = ctxData.BindTo(ctx)
 
 	// split file content into smaller temporary chunk files and transfer them
 	var MaxChunkSize = config.Config.Preflight.UploadChunkSize

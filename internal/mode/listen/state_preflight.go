@@ -51,7 +51,7 @@ func (bm *PreflightState) Run(ctx context.Context) (err error) {
 		return err
 	}
 	defer func() {
-		_, err := shell.Execute(ctx, fmt.Sprintf("export HISTFILE=\"%s\"", histFileRes.Output), nil)
+		_, err := shell.Execute(context.Background(), fmt.Sprintf("export HISTFILE=\"%s\"", histFileRes.Output), nil)
 		if err != nil {
 			logrus.Errorf("failed to re-enable history: %s", err.Error())
 		}

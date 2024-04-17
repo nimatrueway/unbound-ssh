@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## v1.0-alpha7
+
+- Simply print error on failed preflight script instead of executing `printf`
+
 ## v1.0-alpha6
 
 - Fix bug in `preflight` script, specifically the binary uploading step where cancellation did not restore the tty to
