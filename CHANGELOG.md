@@ -3,6 +3,8 @@
 ## v1.0-alpha7
 
 - Simply print error on failed preflight script instead of executing `printf`
+- Improve the reliability of preflight script cancellation mechanism
+- Add configuration entries related to preflight script
 
 ## v1.0-alpha6
 
