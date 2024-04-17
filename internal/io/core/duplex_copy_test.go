@@ -23,10 +23,14 @@ func TestDuplexCopy(t *testing.T) {
 			reader.WriteString("<hello one>")
 			ptyReader.WriteString("<hello two>")
 
-			// cancel one of the readers, DuplexCopy should stop copying when either one is canceled
-			for !reader.IsEmpty() || !ptyReader.IsEmpty() {
+			// wait until both readers are drained
+			for {
+				if reader.IsEmpty() && ptyReader.IsEmpty() {
+					break
+				}
 				time.Sleep(1 * time.Millisecond)
 			}
+			// cancel the readers
 			cancelFn()
 
 			// these two won't be copied
