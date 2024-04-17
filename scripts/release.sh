@@ -15,10 +15,10 @@ fi
 "$SCRIPT_DIR"/build.sh
 
 # figure out the new version and changelog
-CHANGELOG_LAST_VERSION=$(perl -nE 'say $1 if /## (.*)/' ./CHANGELOG.md | head -n 1)
 LATEST_TAG=$(git describe --tags --abbrev=0)
+CHANGELOG_LAST_VERSION=$(perl -nE 'say $1 if /## (.*)/' ./CHANGELOG.md | head -n 1)
 CHANGELOG_2ND_LAST_VERSION=$(perl -nE 'say $1 if /## (.*)/' ./CHANGELOG.md | head -n 2 | tail -n 1)
-if [ "$CHANGELOG_2ND_LAST_VERSION" == "$LATEST_TAG" ]; then
+if [ "$CHANGELOG_LAST_VERSION" == "$LATEST_TAG" ]; then
   echo "CHANGELOG.md is not updated for the latest tag"
   exit 1
 fi
