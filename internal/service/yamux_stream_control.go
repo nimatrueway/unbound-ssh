@@ -99,7 +99,7 @@ func (ycs *YamuxControlStream) process(msg *mode.ControlMessage) {
 }
 
 func (ycs *YamuxControlStream) queueForRetry(msg *mode.ControlMessage) {
-	if msg.ProcessDelay.Seconds() > config.Config.Transfer.Control.RequestTimeout.Seconds() {
+	if msg.ProcessDelay.Seconds() > config.Config.Transfer.RequestTimeout.Seconds() {
 		if msg.IsResponse() {
 			logrus.Warnf("received a response message with no handler: %#v", msg)
 		} else {
@@ -151,7 +151,7 @@ func (ycs *YamuxControlStream) send(content any, responseType any, responseTo mo
 			return nil, fmt.Errorf("expected %s in response but received: %s", mode.TypeNameOf(responseType), mode.TypeNameOf(response))
 		}
 		return response, nil
-	case <-time.After(config.Config.Transfer.Control.RequestTimeout):
+	case <-time.After(config.Config.Transfer.RequestTimeout):
 		return nil, tracerr.Errorf("did not receive a response for: %v", content)
 	}
 }
@@ -216,9 +216,9 @@ func RpcExpectAndRespond[E mode.Exchange[Request, Response], Request any, Respon
 	select {
 	case <-done:
 		return err
-	case <-time.After(config.Config.Transfer.Control.RequestTimeout):
+	case <-time.After(config.Config.Transfer.RequestTimeout):
 		typeName := reflect.TypeFor[Request]().Name()
-		waitTime := config.Config.Transfer.Control.RequestTimeout.String()
+		waitTime := config.Config.Transfer.RequestTimeout.String()
 		return tracerr.Errorf("did not receive a message of type %s in the last %s", typeName, waitTime)
 	}
 }

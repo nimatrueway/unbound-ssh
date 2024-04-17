@@ -30,20 +30,12 @@ func (bm *PreflightState) Run(ctx context.Context) (err error) {
 	reactToClose.ReactTo(EndOfText, stop).Start(ctx)
 	defer connectedStateCloser()
 
-	// TODO: make this cancellable by stdin ctrl+c/ctrl+d
-	shell := ShellExecutor{
-		PtyReader:      bm.PtyStdout,
-		PtyWriter:      bm.Pty,
-		DefaultTimeout: config.Config.Transfer.Control.RequestTimeout,
-	}
+	shell := NewShellExecutor(bm.PtyStdout, bm.Pty)
 
 	// print error on stdout if preflight failed
 	defer func() {
 		if err != nil {
-			_, err := bm.Pty.Write([]byte(fmt.Sprintf("printf \"\n\n\n\\033[0;31m   preflight failed:\n\n   %s\\033[0m\n\n\n\"\n", err.Error())))
-			if err != nil {
-				logrus.Errorf("failed to write error message to robot: %s", err.Error())
-			}
+			fmt.Printf("\n\n\r\n\033[0;31m   preflight failed:\n\r\n   %s\033[0m\n\n\r\n", err.Error())
 		}
 	}()
 
@@ -66,7 +58,7 @@ func (bm *PreflightState) Run(ctx context.Context) (err error) {
 	}()
 
 	// start the full duplex transfer
-	GlobalProbeResult, err := Execute[*NixProbeResult](ctx, &shell, nil)(GeneratePrintNixProbe())
+	GlobalProbeResult, err := Execute[*NixProbeResult](ctx, shell, nil)(GeneratePrintNixProbe())
 	if err != nil {
 		logrus.Errorf("failed to write available commands probe to robot: %s", err.Error())
 		return err
@@ -74,9 +66,21 @@ func (bm *PreflightState) Run(ctx context.Context) (err error) {
 		logrus.Infof("available *nix commands probed: %#v", GlobalProbeResult)
 	}
 
-	enc := GzipAscii85
-	if !GlobalProbeResult.HasPython3() {
-		enc = GzipBase64
+	codec := config.Config.Preflight.UploadCodec
+	if codec == config.Auto {
+		if GlobalProbeResult.HasGunzip() {
+			if GlobalProbeResult.HasPython3() {
+				codec = config.GzipAscii85
+			} else {
+				codec = config.GzipBase64
+			}
+		} else {
+			if GlobalProbeResult.HasPython3() {
+				codec = config.Ascii85
+			} else {
+				codec = config.Base64
+			}
+		}
 	}
 
 	logrus.Info("uploading file.")
@@ -95,7 +99,7 @@ func (bm *PreflightState) Run(ctx context.Context) (err error) {
 				logrus.Errorf("failed to download %s binary using curl: %s", filename, err.Error())
 			}
 		} else {
-			err = FetchUrlAndUpload(ctx, &shell, url, filename, enc)
+			err = FetchUrlAndUpload(ctx, shell, url, filename, codec)
 			if err != nil {
 				logrus.Errorf("failed to upload file: %s", err.Error())
 			}
@@ -133,7 +137,7 @@ func (bm *PreflightState) Run(ctx context.Context) (err error) {
 
 	// upload all dependency files
 	for filename, content := range dependencyFiles {
-		err = Upload(ctx, &shell, content, filename, enc)
+		err = Upload(ctx, shell, content, filename, codec)
 		if err != nil {
 			logrus.Errorf("failed to upload file: %s", err.Error())
 			return err

@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/nimatrueway/unbound-ssh/internal/config"
 	io2 "github.com/nimatrueway/unbound-ssh/internal/io/core"
 	"github.com/nimatrueway/unbound-ssh/internal/io/signature"
 	"github.com/sirupsen/logrus"
@@ -17,6 +18,10 @@ type ShellExecutor struct {
 	PtyReader      *io2.ContextReader
 	PtyWriter      stdio.Writer
 	DefaultTimeout time.Duration
+}
+
+func NewShellExecutor(ptyReader *io2.ContextReader, ptyWriter stdio.Writer) *ShellExecutor {
+	return &ShellExecutor{PtyReader: ptyReader, PtyWriter: ptyWriter, DefaultTimeout: config.Config.Preflight.CommandTimeout}
 }
 
 func (se *ShellExecutor) Execute(ctx context.Context, cmd string, inputData []byte) (signature.CommandResult, error) {
@@ -37,6 +42,15 @@ func (se *ShellExecutor) Execute(ctx context.Context, cmd string, inputData []by
 	return result, nil
 }
 
+// Execute has a pretty weird signature due to golang type inference limitations, it is meant to be used in this way:
+// Execute[*signature.XXX](ctx, shell, inputData)(signature.GenerateXXX())
+func Execute[S signature.Signature](ctx context.Context, se *ShellExecutor, input []byte) func(string, S) (S, error) {
+	return func(cmd string, sig S) (S, error) {
+		err := se.runAndExpect(ctx, cmd, input, sig)
+		return sig, err
+	}
+}
+
 func (se *ShellExecutor) runAndExpect(ctx context.Context, command string, inputData []byte, expect signature.Signature) error {
 	robotR, robotW := stdio.Pipe()
 	go func() {
@@ -55,19 +69,11 @@ func (se *ShellExecutor) runAndExpect(ctx context.Context, command string, input
 		}
 	}()
 
-	err := io2.DuplexCopy(ctx, se.PtyWriter, &io2.ContextReadCloser{ReadCloser: robotR}, os.Stdout, io2.NewSignatureDetector(expect).Wrap(se.PtyReader))
+	ctxWithTimeout, _ := context.WithTimeout(ctx, se.DefaultTimeout)
+	err := io2.DuplexCopy(ctxWithTimeout, se.PtyWriter, &io2.ContextReadCloser{ReadCloser: robotR}, os.Stdout, io2.NewSignatureDetector(expect).Wrap(se.PtyReader))
 	if err != nil && !errors.Is(err, io2.SignatureFound) {
 		return err
 	}
 
 	return nil
-}
-
-// Execute this method has a pretty weird signature due to golang type inference limitations
-// e.g. Execute[*signature.BatchCommandResult](ctx, shell, inputData)(signature.Generate___())
-func Execute[S signature.Signature](ctx context.Context, se *ShellExecutor, input []byte) func(string, S) (S, error) {
-	return func(cmd string, sig S) (S, error) {
-		err := se.runAndExpect(ctx, cmd, input, sig)
-		return sig, err
-	}
 }

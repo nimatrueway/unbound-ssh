@@ -3,6 +3,7 @@ package test
 import (
 	"context"
 	"fmt"
+	"github.com/nimatrueway/unbound-ssh/internal/config"
 	"github.com/nimatrueway/unbound-ssh/internal/mode/listen"
 	"github.com/nimatrueway/unbound-ssh/test/utils"
 	"github.com/stretchr/testify/require"
@@ -14,19 +15,19 @@ import (
 const UploadSize = 1 * 1024 * 1024
 
 func TestFileUploadAlpineBase64(t *testing.T) {
-	testUpload(t, generateContainerizedShell(t), listen.Base64)
+	testUpload(t, generateContainerizedShell(t), config.Base64)
 }
 
 func TestFileUploadAlpineGzipBase64(t *testing.T) {
-	testUpload(t, generateContainerizedShell(t), listen.GzipBase64)
+	testUpload(t, generateContainerizedShell(t), config.GzipBase64)
 }
 
 func TestFileUploadAlpineAscii85(t *testing.T) {
-	testUpload(t, generateContainerizedShell(t), listen.Ascii85)
+	testUpload(t, generateContainerizedShell(t), config.Ascii85)
 }
 
 func TestFileUploadAlpineGzipAscii85(t *testing.T) {
-	testUpload(t, generateContainerizedShell(t), listen.GzipAscii85)
+	testUpload(t, generateContainerizedShell(t), config.GzipAscii85)
 }
 
 func generateContainerizedShell(t *testing.T) string {
@@ -41,7 +42,7 @@ func generateContainerizedShell(t *testing.T) string {
 	return shellCmd
 }
 
-func testUpload(t *testing.T, shellCmd string, transferEnc listen.Encoding) {
+func testUpload(t *testing.T, shellCmd string, transferEnc config.PreflightUploadCodec) {
 	ctx := context.Background()
 	c, _ := utils.LaunchAndConnect(t, utils.UnboundSshLaunchConfig{
 		LaunchConfig:   utils.LaunchConfig{WorkDir: "$(TestWorkspaceDir)"},
@@ -58,12 +59,9 @@ func testUpload(t *testing.T, shellCmd string, transferEnc listen.Encoding) {
 	}
 
 	filename := "test.bin"
-	shell := listen.ShellExecutor{
-		PtyReader:      c.CtxReader,
-		PtyWriter:      c.Writer,
-		DefaultTimeout: utils.AssertionTimeout,
-	}
-	err := listen.Upload(ctx, &shell, string(buf), filename, transferEnc)
+	shell := listen.NewShellExecutor(c.CtxReader, c.Writer)
+	shell.DefaultTimeout = utils.AssertionTimeout
+	err := listen.Upload(ctx, shell, string(buf), filename, transferEnc)
 	require.NoError(t, err)
 
 	c.MustExpect(utils.ShellPrompt)

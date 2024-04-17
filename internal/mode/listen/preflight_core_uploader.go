@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/nimatrueway/unbound-ssh/internal/config"
+	"github.com/nimatrueway/unbound-ssh/internal/io/core"
 	"github.com/sirupsen/logrus"
 	stdio "io"
 	"net/http"
@@ -17,17 +18,7 @@ import (
 	"path"
 )
 
-type Encoding string
-
-const (
-	Plain       Encoding = "plain"
-	Base64      Encoding = "base64"
-	GzipBase64  Encoding = "gzip+base64"
-	Ascii85     Encoding = "ascii85"
-	GzipAscii85 Encoding = "gzip+ascii85"
-)
-
-func ReadFileAndUpload(ctx context.Context, shell *ShellExecutor, file string, filename string, encoding Encoding) error {
+func ReadFileAndUpload(ctx context.Context, shell *ShellExecutor, file string, filename string, encoding config.PreflightUploadCodec) error {
 	reader, err := createFileReader(file)
 	if err != nil {
 		return err
@@ -39,7 +30,7 @@ func ReadFileAndUpload(ctx context.Context, shell *ShellExecutor, file string, f
 	return upload(ctx, shell, filename, reader, encoding)
 }
 
-func FetchUrlAndUpload(ctx context.Context, shell *ShellExecutor, url string, filename string, encoding Encoding) error {
+func FetchUrlAndUpload(ctx context.Context, shell *ShellExecutor, url string, filename string, encoding config.PreflightUploadCodec) error {
 	reader, err := createUrlReader(url)
 	if err != nil {
 		return err
@@ -48,18 +39,18 @@ func FetchUrlAndUpload(ctx context.Context, shell *ShellExecutor, url string, fi
 	return upload(ctx, shell, filename, reader, encoding)
 }
 
-func Upload(ctx context.Context, shell *ShellExecutor, content string, filename string, encoding Encoding) error {
+func Upload(ctx context.Context, shell *ShellExecutor, content string, filename string, encoding config.PreflightUploadCodec) error {
 	return upload(ctx, shell, filename, stdio.NopCloser(bytes.NewBufferString(content)), encoding)
 }
 
-func upload(ctx context.Context, shell *ShellExecutor, filename string, reader stdio.ReadCloser, encoding Encoding) error {
+func upload(ctx context.Context, shell *ShellExecutor, filename string, reader stdio.ReadCloser, encoding config.PreflightUploadCodec) error {
 	// stage 0: tap reader to calculate size/hash
 	size := uint64(0)
 	hash := [32]byte{}
 	reader = trackSizeAndHash(reader, &size, &hash)
 
 	// stage 1: add gzip filter
-	if encoding == GzipBase64 || encoding == GzipAscii85 {
+	if encoding == config.GzipBase64 || encoding == config.GzipAscii85 {
 		logrus.Debugf("will compress input in gzip")
 		reader = applyEncoder(reader, "gzip", func(w stdio.Writer) stdio.WriteCloser {
 			zipper, _ := gzip.NewWriterLevel(w, gzip.BestCompression)
@@ -68,11 +59,11 @@ func upload(ctx context.Context, shell *ShellExecutor, filename string, reader s
 	}
 
 	// stage 2: add base64/ascii85 filter
-	if encoding == Base64 || encoding == GzipBase64 {
+	if encoding == config.Base64 || encoding == config.GzipBase64 {
 		reader = applyEncoder(reader, "base64", func(writer stdio.Writer) stdio.WriteCloser {
 			return base64.NewEncoder(base64.StdEncoding, writer)
 		})
-	} else if encoding == Ascii85 || encoding == GzipAscii85 {
+	} else if encoding == config.Ascii85 || encoding == config.GzipAscii85 {
 		reader = applyEncoder(reader, "ascii85", func(writer stdio.Writer) stdio.WriteCloser {
 			return ascii85.NewEncoder(writer)
 		})
@@ -80,6 +71,12 @@ func upload(ctx context.Context, shell *ShellExecutor, filename string, reader s
 
 	// stage 3: transfer file content
 	logrus.Debug("transferring file content")
+	defer func() {
+		err := reader.Close()
+		if err != nil {
+			logrus.Warnf("Close() failed on the reader: %s", err.Error())
+		}
+	}()
 	err := writeFile(ctx, shell, filename, reader)
 	if err != nil {
 		logrus.Warnf("transferring file content failed: %s", err.Error())
@@ -88,9 +85,9 @@ func upload(ctx context.Context, shell *ShellExecutor, filename string, reader s
 	logrus.Infof("all bytes successfully transferred.")
 
 	// stage 4: decode the transferred file
-	if encoding == Base64 || encoding == GzipBase64 {
+	if encoding == config.Base64 || encoding == config.GzipBase64 {
 		err = decodeBase64File(ctx, shell, filename)
-	} else if encoding == Ascii85 || encoding == GzipAscii85 {
+	} else if encoding == config.Ascii85 || encoding == config.GzipAscii85 {
 		err = decodeAscii85File(ctx, shell, filename)
 	}
 	if err != nil {
@@ -98,7 +95,7 @@ func upload(ctx context.Context, shell *ShellExecutor, filename string, reader s
 	}
 
 	// stage 5: un-gzip the transferred file
-	if encoding == GzipBase64 || encoding == GzipAscii85 {
+	if encoding == config.GzipBase64 || encoding == config.GzipAscii85 {
 		err = unGzipFile(ctx, shell, filename)
 		if err != nil {
 			return err
@@ -172,7 +169,7 @@ func writeFile(ctx context.Context, shell *ShellExecutor, filename string, data 
 	}()
 
 	// split file content into smaller temporary chunk files and transfer them
-	var MaxChunkSize = config.Config.Transfer.Buffer
+	var MaxChunkSize = config.Config.Preflight.UploadChunkSize
 	buf := make([]byte, MaxChunkSize)
 	for chunk := 0; true; chunk++ {
 		nRead, err := stdio.ReadAtLeast(data, buf, len(buf))
@@ -187,7 +184,9 @@ func writeFile(ctx context.Context, shell *ShellExecutor, filename string, data 
 		}
 
 		chunkName := fmt.Sprintf(`%s_chunk_%07d.tmp`, filename, chunk)
-		_, err = shell.Execute(ctx, fmt.Sprintf(`dd bs=%d count=1 iflag=fullblock >%s`, nRead, chunkName), buf[:nRead])
+		// this is intentionally non-cancellable, as we need to ensure that the chunk writing is completed
+		// otherwise "dd" running in raw-mode will freeze the terminal
+		_, err = shell.Execute(context.Background(), fmt.Sprintf(`dd bs=%d count=1 iflag=fullblock >%s`, nRead, chunkName), buf[:nRead])
 		if err != nil {
 			return err
 		}
@@ -230,23 +229,38 @@ func applyEncoder(reader stdio.ReadCloser, name string, encoder func(stdio.Write
 	pipeR, pipeW := stdio.Pipe()
 	encoderW := encoder(pipeW)
 	go func() {
+		// close the underlying reader upon exhaustion of the content
 		defer func() {
 			err := reader.Close()
 			if err != nil {
 				logrus.Warnf("Close() failed on the underlying reader of encoder %s: %s", name, err.Error())
 			}
 		}()
+
+		// copy the reader content to the encoder, which will encode it and write to the writer pipe,
+		// and that can be read through the pipe reader
 		_, err := stdio.Copy(encoderW, reader)
 		if err != nil {
 			logrus.Warnf("encoder %s failed: %s", name, err.Error())
 		}
-		err = encoderW.Close()
-		if err != nil {
-			logrus.Warnf("Close() failed on encoder %s: %s", name, err.Error())
+
+		// close the encoder so that it can flush the remaining data
+		flushErr := encoderW.Close()
+		if flushErr != nil {
+			logrus.Warnf("Close() failed on encoder %s: %s", name, flushErr.Error())
 		}
-		err = pipeW.CloseWithError(stdio.EOF)
-		if err != nil {
-			logrus.Warnf("Close() failed on the writer pipe of encoder %s: %s", name, err.Error())
+
+		// close the writer pipe, so that reader pipe will close as well
+		var pipeCloseErr error
+		if err == nil && flushErr == nil {
+			pipeCloseErr = pipeW.CloseWithError(stdio.EOF)
+		} else if err != nil {
+			pipeCloseErr = pipeW.CloseWithError(err)
+		} else if flushErr != nil {
+			pipeCloseErr = pipeW.CloseWithError(flushErr)
+		}
+		if pipeCloseErr != nil {
+			logrus.Warnf("Close() failed on the writer pipe of encoder %s: %s", name, pipeCloseErr.Error())
 		}
 	}()
 	return pipeR

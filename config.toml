@@ -1,7 +1,24 @@
+## configurations related to preflight script that is triggered using <ctrl+g>x3
+## the preflight script will upload unbound-ssh binary, configuration file and its dependencies to server
 #[preflight]
-#codec = "auto" # TODO: config to be implemented
-#assume_no_internet = true # TODO: config to be implemented
+## the content of files will be encoded using this codec before its sent to server
+## valid options are "auto", "base64", "gzip+base64", "ascii85", "gzip+ascii85"
+## "auto" means based on the *nix probe that preflight script runs, it will choose the most efficient codec
+#upload_codec = "auto"
+## the content of files will be split to chunks of this size and sent to server using "dd" command
+#upload_chunk_size = "64KB"
+## The unbound-ssh binary for the spy-mode side will be dynamically selected based on the operating system
+## and architecture of the system. If the system has internet access and either cURL or wget installed on it,
+## the binary will be downloaded from GitHub directly from the spy-mode side.
+## If internet access is not available, the listen-mode will download the binary and then send it to the spy-mode
+## side in chunks. With this flag set to true downloading the binary will always happen on the listen-mode side
+#assume_no_internet = false
+## every shell command that the preflight script executes is expected to respond back
+## in this time frame, otherwise the preflight state will be cancelled
+#command_timeout = "10s"
 
+
+## configurations related to the how listen-mode and spy-mode communicate with each other
 #[transfer]
 ## the codec to use for encoding/decoding every single byte exchanged between listen-mode and spy-mode
 #codec = "hex"
@@ -16,7 +33,8 @@
 #connection_timeout = "10s"
 ## the timeout for requests between listen-mode and spy-mode
 #request_timeout = "10s"
-#
+
+
 #[log]
 ## choose between "trace", "debug", "info", "warn", "error" to calibrate the verbosity of the logs
 ## at "trace" level, the logs will contain all binary data exchanged between the client and the server
@@ -25,20 +43,32 @@
 ## so we can not convolute output with logs
 #file = "unbound_ssh.log"
 
-[[service]]
-type = "echo"
-bind = "tcp://127.0.0.1:10689"
+
+## each service block represents a service that will be exposed by the listen-mode which acts as a proxy
+## between the client and the spy-mode that will actually serve the request
+#[[service]]
+## "echo" service is only for testing purposes. spy-mode simply echoes back the message you send to it
+#type = "echo"
+## the bind address that listem-mode will bind to, in order to receive and serve the client requests
+#bind = "tcp://127.0.0.1:10689"
 
 [[service]]
+# "embedded_webdav" is an easy-to-setup and use file sharing server protocol
 type = "embedded_webdav"
 bind = "tcp://127.0.0.1:10690"
 
 #[[service]]
+## "embedded_ssh" is a full-fledged unrestricted ssh server with no authentication
+## that can be used for anything including remote command execution, interactive shell,
+## port-forwarding, file transfer, socks proxy, vpn, etc.
 #type = "embedded_ssh"
 #bind = "tcp://unbound-ssh.local:10691"
+## encryption is mandatory for an SSH server so embedded_ssh needs a valid ssl certificate, you can
+## generate that using "txeh" and "mkcert"
 #certificate = "cert/unbound-ssh.local-key.pem"
 
 #[[service]]
+## port_forward service is a simple port forwarding service
 #type = "port_forward"
 #bind = "tcp://127.0.0.1:10692"
 #destination = "tcp://httpbin.org:80"

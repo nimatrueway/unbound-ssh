@@ -28,20 +28,46 @@ type ServiceDescription struct {
 }
 
 type Struct struct {
+	Preflight struct {
+		UploadCodec      PreflightUploadCodec `default:"auto" toml:"upload_codec"`
+		UploadChunkSize  units.Base2Bytes     `default:"65536" toml:"upload_chunk_size"`
+		AssumeNoInternet bool                 `default:"false" toml:"assume_no_internet"`
+		CommandTimeout   time.Duration        `default:"10s" toml:"command_timeout"`
+	}
 	Transfer struct {
 		Codec                   CodecType        `default:"hex" toml:"codec"`
 		SignatureDetectorBuffer units.Base2Bytes `default:"10240" toml:"signature_detector_buffer"`
 		Buffer                  units.Base2Bytes `default:"65536" toml:"buffer"`
 		ConnectionTimeout       time.Duration    `default:"10s" toml:"connection_timeout"`
-		Control                 struct {
-			RequestTimeout time.Duration `default:"10s" toml:"request_timeout"`
-		}
+		RequestTimeout          time.Duration    `default:"10s" toml:"request_timeout"`
 	}
 	Log struct {
 		File  string       `default:"unbound_ssh_$(mode).log" toml:"file"`
 		Level logrus.Level `default:"4" toml:"level"`
 	}
 	Service []ServiceDescription `toml:"service"`
+}
+
+// ---------------------------------------------------------------------------
+
+type PreflightUploadCodec string
+
+const (
+	Auto        PreflightUploadCodec = "auto"
+	Base64      PreflightUploadCodec = "base64"
+	GzipBase64  PreflightUploadCodec = "gzip+base64"
+	Ascii85     PreflightUploadCodec = "ascii85"
+	GzipAscii85 PreflightUploadCodec = "gzip+ascii85"
+)
+
+func (s *PreflightUploadCodec) UnmarshalText(text []byte) error {
+	validValues := []PreflightUploadCodec{Auto, Base64, GzipBase64, Ascii85, GzipAscii85}
+	serviceType := PreflightUploadCodec(text)
+	if !lo.Contains(validValues, serviceType) {
+		return fmt.Errorf("invalid preflight upload codec: %s", text)
+	}
+	*s = PreflightUploadCodec(text)
+	return nil
 }
 
 // ---------------------------------------------------------------------------

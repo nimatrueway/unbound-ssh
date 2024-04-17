@@ -27,6 +27,7 @@ func GeneratePrintNixProbe() (command string, collector *NixProbeResult) {
 		"wc":               "command -v wc",
 		"cut":              "command -v cut",
 		"paste":            "command -v paste",
+		"gunzip":           "command -v gunzip",
 		"curl":             "command -v curl",
 		"wget":             "command -v wget",
 		"dig":              "command -v dig",
@@ -82,6 +83,10 @@ func (p *NixProbeResult) Binary() string {
 	return fmt.Sprintf("unbound-ssh_%s_%s", os, arch)
 }
 
+func (p *NixProbeResult) HasGunzip() bool {
+	return p.Get("gunzip").IsSuccess()
+}
+
 func (p *NixProbeResult) BinaryDownloadUrl() string {
 	binary := p.Binary()
 	if binary == "" {
@@ -99,7 +104,7 @@ func (p *NixProbeResult) IsBusyBox() bool {
 }
 
 func (p *NixProbeResult) HasInternetAccess() bool {
-	return p.Get("internet").IsSuccess()
+	return p.Get("internet").IsSuccess() && !config.Config.Preflight.AssumeNoInternet
 }
 
 func (p *NixProbeResult) HasCurl() bool {
