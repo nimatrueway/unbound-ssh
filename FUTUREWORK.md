@@ -1,8 +1,8 @@
 # Future Work
 
 - [ ] unit-test preflight upload cancellation using ubuntu image.
-- [ ] remove wildcard bullshit from the config file
 - [ ] audit all timeout usages and separate them
+- [ ] remove wildcard bullshit from the config file
 - [ ] make it work without `config.toml` 
   - [ ] make it work only with args instead of config.toml
 
@@ -30,3 +30,4 @@
 - [ ] support tmux
 - [ ] offer other fast working codecs (e.g. base64, base32, etc.)
 - [ ] automatically reconnect on connection loss
+- [ ] try smux instead of yamux

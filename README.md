@@ -33,7 +33,7 @@ unbound-ssh in spy mode.
 Connecting to server.com...
 
 # trigger preflight script
-# (it uploads unbound-ssh binary, the config file and its dependencies to the server)
+# (it uploads unbound-ssh binary, the config file and its dependencies to the local directory on server)
 🌩️ server$ <ctrl+g><ctrl+g><ctrl+g>
 
 # run `unbound-ssh spy` on your server to connect
