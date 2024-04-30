@@ -68,7 +68,12 @@ bind = "tcp://127.0.0.1:10690"
 #certificate = "cert/unbound-ssh.local-key.pem"
 
 #[[service]]
+## embedded_http_proxy service is a simple http proxy service
+#type = "embedded_http_proxy"
+#bind = "tcp://127.0.0.1:10692"
+
+#[[service]]
 ## port_forward service is a simple port forwarding service
 #type = "port_forward"
-#bind = "tcp://127.0.0.1:10692"
+#bind = "tcp://127.0.0.1:10693"
 #destination = "tcp://httpbin.org:80"

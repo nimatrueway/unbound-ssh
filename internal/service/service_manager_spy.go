@@ -82,6 +82,8 @@ func (sm *SpyServiceManager) justLaunch(idx int) (net.Addr, Server, error) {
 	var server Server
 	if service.Type == config.EmbeddedWebdav {
 		server, err = CreateWebdavServer()
+	} else if service.Type == config.EmbeddedHttpProxy {
+		server, err = CreateHttpServer()
 	} else if service.Type == config.EmbeddedSsh {
 		server, err = CreateSshServer(service.Certificate)
 	} else if service.Type == config.Echo {

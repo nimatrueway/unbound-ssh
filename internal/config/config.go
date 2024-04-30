@@ -94,14 +94,15 @@ func (s *CodecType) UnmarshalText(text []byte) error {
 type ServiceType string
 
 const (
-	EmbeddedWebdav ServiceType = "embedded_webdav"
-	EmbeddedSsh    ServiceType = "embedded_ssh"
-	PortForward    ServiceType = "port_forward"
-	Echo           ServiceType = "echo"
+	EmbeddedWebdav    ServiceType = "embedded_webdav"
+	EmbeddedSsh       ServiceType = "embedded_ssh"
+	EmbeddedHttpProxy ServiceType = "embedded_http_proxy"
+	PortForward       ServiceType = "port_forward"
+	Echo              ServiceType = "echo"
 )
 
 func (s *ServiceType) UnmarshalText(text []byte) error {
-	validValues := []ServiceType{EmbeddedWebdav, EmbeddedSsh, PortForward, Echo}
+	validValues := []ServiceType{EmbeddedWebdav, EmbeddedSsh, EmbeddedHttpProxy, PortForward, Echo}
 	serviceType := ServiceType(text)
 	if !lo.Contains(validValues, serviceType) {
 		return fmt.Errorf("invalid service type: %s", text)

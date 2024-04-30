@@ -10,6 +10,7 @@ require (
 	github.com/alecthomas/units v0.0.0-20231202071711-9a357b53e9c9
 	github.com/antonfisher/nested-logrus-formatter v1.3.1
 	github.com/creack/pty v1.1.21
+ 	github.com/elazarl/goproxy v0.0.0-20231117061959-7cc037d33fb5
 	github.com/gliderlabs/ssh v0.3.7
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/yamux v0.1.1

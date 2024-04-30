@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## v1.0-alpha8
+
+- Add a new service type: embedded_http_proxy
+
 ## v1.0-alpha7
 
 - Simply print error on failed preflight script instead of executing `printf`

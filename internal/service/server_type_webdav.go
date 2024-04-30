@@ -2,6 +2,7 @@ package service
 
 import (
 	"github.com/sirupsen/logrus"
+	"github.com/ztrue/tracerr"
 	"golang.org/x/net/webdav"
 	"net"
 	"net/http"
@@ -51,5 +52,9 @@ func (f *WebdavServer) Close() (err error) {
 		errs = append(errs, err)
 	}
 
-	return nil
+	if len(errs) > 0 {
+		return tracerr.Errorf("failed to close http proxy server: %v", errs)
+	} else {
+		return nil
+	}
 }
