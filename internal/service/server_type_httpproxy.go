@@ -2,7 +2,9 @@ package service
 
 import (
 	"github.com/elazarl/goproxy"
+	"github.com/sirupsen/logrus"
 	"github.com/ztrue/tracerr"
+	"log"
 	"net"
 	"net/http"
 )
@@ -13,9 +15,12 @@ type httpServer struct {
 }
 
 func CreateHttpServer() (Server, error) {
+	server := goproxy.NewProxyHttpServer()
+	server.Logger = logrus.StandardLogger()
 	proxy := httpServer{
 		server: &http.Server{
-			Handler: goproxy.NewProxyHttpServer(),
+			Handler:  server,
+			ErrorLog: log.New(logrus.StandardLogger().Writer(), "[http-server] ", log.LstdFlags),
 		},
 	}
 	return &proxy, nil

@@ -4,6 +4,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/ztrue/tracerr"
 	"golang.org/x/net/webdav"
+	"log"
 	"net"
 	"net/http"
 )
@@ -28,7 +29,8 @@ func CreateWebdavServer() (Server, error) {
 		},
 	}
 	server := http.Server{
-		Handler: &handler,
+		Handler:  &handler,
+		ErrorLog: log.New(logrus.StandardLogger().Writer(), "[webdav-server] ", log.LstdFlags),
 	}
 	return &WebdavServer{server: &server}, nil
 }

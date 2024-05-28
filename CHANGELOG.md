@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## v1.0-alpha9
+
+- Prevent http servers backends from logging to stdout or stderr
+
 ## v1.0-alpha8
 
 - Add a new service type: embedded_http_proxy
